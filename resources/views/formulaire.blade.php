@@ -25,6 +25,7 @@
             --bordure: #c9ddf3;
             --erreur: #d62839;
             --whatsapp: #25a244;
+            --attention: #e08a00;
         }
 
         * {
@@ -426,7 +427,7 @@
             font-size: 14px;
         }
 
-        /* BOITE DE DIALOGUE */
+        /* BOITES DE DIALOGUE */
 
         .modal-overlay {
             position: fixed;
@@ -479,6 +480,12 @@
             stroke-width: 3;
             stroke-linecap: round;
             stroke-linejoin: round;
+        }
+
+        /* Variante "déjà inscrit" (orange) */
+        .modal-icon.warning {
+            background: #fff3dc;
+            color: var(--attention);
         }
 
         .modal h3 {
@@ -844,12 +851,38 @@
         </div>
     </div>
 
+    <!-- BOITE DE DIALOGUE : UTILISATEUR DEJA INSCRIT -->
+    <div class="modal-overlay" id="modal-deja" role="dialog" aria-modal="true" aria-labelledby="modal-deja-title">
+        <div class="modal">
+            <div class="modal-icon warning">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <line x1="12" y1="6" x2="12" y2="13"/>
+                    <line x1="12" y1="17.5" x2="12" y2="17.6"/>
+                </svg>
+            </div>
+
+            <h3 id="modal-deja-title">Utilisateur déjà inscrit</h3>
+
+            <p>
+                Ce numéro de téléphone est déjà enregistré à la
+                Chorale Immaculée Conception. Vous n'avez pas besoin
+                de vous inscrire une seconde fois.
+            </p>
+
+            <button type="button" class="modal-btn" id="modal-deja-close">Fermer</button>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
             const form = document.getElementById('inscription-form');
+
             const modal = document.getElementById('modal');
             const modalClose = document.getElementById('modal-close');
+
+            const modalDeja = document.getElementById('modal-deja');
+            const modalDejaClose = document.getElementById('modal-deja-close');
 
             const fieldVoix = document.getElementById('field-voix');
             const selectVoix = document.getElementById('voix');
@@ -982,6 +1015,12 @@
                             return {};
                         });
 
+                        /* Utilisateur déjà inscrit (code 409 renvoyé par le serveur) */
+                        if (response.status === 409 || data.deja_inscrit) {
+                            ouvrirModalDeja();
+                            return;
+                        }
+
                         if (response.status === 422 && data.errors) {
                             const premierMessage = Object.values(data.errors)[0][0];
                             afficherAlerte(premierMessage);
@@ -998,6 +1037,7 @@
                     });
             });
 
+            /* Boîte de dialogue : inscription réussie */
             function ouvrirModal() {
                 modal.classList.add('open');
                 modalClose.focus();
@@ -1011,14 +1051,34 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
+            /* Boîte de dialogue : utilisateur déjà inscrit */
+            function ouvrirModalDeja() {
+                modalDeja.classList.add('open');
+                modalDejaClose.focus();
+            }
+
+            function fermerModalDeja() {
+                modalDeja.classList.remove('open');
+                /* On garde les champs remplis : l'utilisateur peut corriger son numéro si c'était une erreur */
+                form.telephone.focus();
+            }
+
             modalClose.addEventListener('click', fermerModal);
+            modalDejaClose.addEventListener('click', fermerModalDeja);
 
             modal.addEventListener('click', function (event) {
                 if (event.target === modal) fermerModal();
             });
 
+            modalDeja.addEventListener('click', function (event) {
+                if (event.target === modalDeja) fermerModalDeja();
+            });
+
             document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape' && modal.classList.contains('open')) fermerModal();
+                if (event.key !== 'Escape') return;
+
+                if (modal.classList.contains('open')) fermerModal();
+                if (modalDeja.classList.contains('open')) fermerModalDeja();
             });
 
         });
